@@ -12,6 +12,7 @@ function love.load(arg)
   filePath = "Unpack.json"
   love.graphics.setBackgroundColor(250,250,250)
   
+  _UseCanvas = love.graphics.isSupported("canvas")
   _Timer = 0
   _Wait = 0.50
   unpacks = {}
@@ -47,18 +48,24 @@ function love.load(arg)
   fr.author = loveframes.Create("text")
   fr.author:SetPos(110,love.graphics.getHeight()-fr.exit:GetHeight()):SetText("By: RamiLego4Game, Made For: Concerned Joe.")
   
-  fr.wait = loveframes.Create("numberbox")
-  fr.wait:SetSize(100,25):SetPos(590,love.graphics.getHeight()-fr.exit:GetHeight()-5)
-  fr.wait:SetMinMax(0,60):SetValue(0.50):SetIncreaseAmount(1)
-  fr.wait.OnValueChanged = function(object, value)
-    _Wait = value
+  if not _UseCanvas then
+    fr.wait = loveframes.Create("numberbox")
+    fr.wait:SetSize(100,25):SetPos(590,love.graphics.getHeight()-fr.exit:GetHeight()-5)
+    fr.wait:SetMinMax(0,60):SetValue(0.50):SetIncreaseAmount(1)
+    fr.wait.OnValueChanged = function(object, value)
+      _Wait = value
+    end
   end
   
   loadUnpacks(workingDir..filePath,workingDir)
+  
+  if not _UseCanvas then
+    infoFrame("Graphics Problem","Sorry, But your graphics card does not support canvases, \n      The program will switch to the old slow hook, That \n            may cause some problem while unpacking \n                          images with small width !",true)
+  end
 end
 
 function love.draw()
-  if _Save then
+  if _Save and not _UseCanvas then
     love.graphics.setBackgroundColor(0,0,0,0)
     love.graphics.draw(_Source,_Save.quad,0,0)
     if _Timer >= _Wait then
@@ -79,24 +86,51 @@ function love.draw()
       _Save = nil
     end
   else
-    love.graphics.setBackgroundColor(250,250,250,255)
     loveframes.draw()
   end
 end
 
 function love.update(dt)
-  _Timer = _Timer + dt
+  if not _UseCanvas then _Timer = _Timer + dt end
   if unpacks[currentPack] ~= nil and _Save == nil then
+    
     quad = love.graphics.newQuad( unpacks[currentPack].x, unpacks[currentPack].y, unpacks[currentPack].width, unpacks[currentPack].height, _Source:getWidth(), _Source:getHeight() )
     _Save = { filename=unpacks[currentPack].filename,width=unpacks[currentPack].width,height=unpacks[currentPack].height,quad=quad }
-    love.window.setMode(_Save.width, _Save.height, {})
-    love.window.setTitle( _Save.filename )
-    _Wait = fr.wait:GetValue()
+    if _UseCanvas then
+      _Canvas = love.graphics.newCanvas(_Save.width,_Save.height)
+      love.graphics.setCanvas(_Canvas)
+      _Canvas:clear()
+      love.graphics.setColor(255,255,255,255)
+      love.graphics.draw(_Source,_Save.quad,0,0)
+      love.graphics.setCanvas()
+      imageData = _Canvas:getImageData( )
+      imageData:encode("/".._Save.filename)
+      save = io.open(saveDir.._Save.filename,"rb")
+      
+      work = io.open(workingDir.."Unpacked/".._Save.filename,"wb")
+      work:write(save:read("*all"))
+      work:flush()
+      work:close()
+      
+      save:close()
+      
+      love.filesystem.remove(_Save.filename)
+      _Save = nil
+    else
+      love.window.setMode(_Save.width, _Save.height, {})
+      love.window.setTitle( _Save.filename )
+      _Wait = fr.wait:GetValue()
+    end
     nextPack()
-  elseif unpacks[currentPack] == nil and currentPack > 0 and _Timer > _Wait+1 and _Timer < _Wait+2 then
-    love.window.setMode(800, 600, {})
-    love.window.setTitle( "Textures Unpacker" )
-    fr.current:SetValue(currentPack)
+  elseif unpacks[currentPack] == nil and currentPack > 0 then
+    if not _UseCanvas and _Timer > _Wait+1 and _Timer < _Wait+2 then
+      love.graphics.setBackgroundColor(250,250,250,255)
+      love.window.setMode(800, 600, {})
+      love.window.setTitle( "Textures Unpacker" )
+      fr.current:SetValue(currentPack)
+    elseif _UseCanvas then
+      fr.current:SetValue(currentPack)
+    end
   end
   loveframes.update(dt)
 end
@@ -158,10 +192,10 @@ end
 
 function doneFrame()
   fr.doneFrame = loveframes.Create("frame")
-  fr.doneFrame:SetDraggable(false):SetAlwaysOnTop(true):SetModal(true):SetName("Finished Downloading")
+  fr.doneFrame:SetDraggable(false):SetAlwaysOnTop(true):SetModal(true):SetName("Unpacking Done")
   fr.doneFrame:SetSize(500,300):SetPos(love.graphics.getWidth()/2,love.graphics.getHeight()/2,true)
   local text = loveframes.Create("text", fr.doneFrame)
-    text:SetText("Finished Unpacking.")
+    text:SetText("Unpacking Done.")
     text.Update = function(object, dt)
       object:CenterX()
       object:SetY(150)
