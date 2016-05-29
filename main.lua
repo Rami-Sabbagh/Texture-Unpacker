@@ -6,7 +6,7 @@ local _Width, _Height = love.graphics.getDimensions()
 local Font = {}
 
 function love.load(arg)
-  love.graphics.setBackgroundColor(250,250,250)
+  love.graphics.setBackgroundColor(255,255,255)
   Font[12] = love.graphics.newFont("NotoSans-Regular.ttf",12)
 end
 
