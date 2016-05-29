@@ -11,10 +11,16 @@ function love.load(arg)
 end
 
 function love.draw()
-  love.graphics.setColor(150,150,150,255)
+  love.graphics.setColor(100,100,100,255)
   love.graphics.setFont(Font[12])
   love.graphics.printf("Please drop the sheet files into this window",_Width/8,_Height/4,(_Width/8)*6,"center")
+  
+  love.graphics.setColor(150,150,150,255)
   love.graphics.printf("This tool has been made by RamiLego4Game for MoveOrDie.",(_Height/16),_Height-(_Height/8),_Width-(_Height/8),"left")
+end
+
+function love.filedropped(file)
+  print(file:getFilename().." has been dropped into the tool.")
 end
 
 function love.update(dt)
