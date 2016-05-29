@@ -1,212 +1,128 @@
---SSHWorld By RamiLego4Game--
---Imports--
-require "loveframes"
-JSON = (loadfile "JSON.lua")()
-  
---Classess Importes--
-require "class"
+--Texture Unpacker By RamiLego4Game--Github: https://github.com/RamiLego4Game/Texture-Unpacker .--
+--[[
+Copyright 2016 Rami Sabbagh
+
+   Licensed under the Apache License, Version 2.0 (the "License");
+   you may not use this file except in compliance with the License.
+   You may obtain a copy of the License at
+
+       http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing, software
+   distributed under the License is distributed on an "AS IS" BASIS,
+   WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+   See the License for the specific language governing permissions and
+   limitations under the License.
+]]
+
+io.stdout:setvbuf("no")
+
+local JSON = require("JSON")
+local _Width, _Height = love.graphics.getDimensions()
+local _Font, _Images, _Info, _Status, _Errmsg = {}, {}, "Please drop the sheet files into this window to extract", "Waiting for sheet files...", ""
+local JobStarted, JobFrame, tArr, tSheet, tImage, JobThread = false, 1, nil, nil, nil, nil
+local SDC = love.thread.getChannel("SDC") --Sheet Directory Channel
+local SIC = love.thread.getChannel("SIC") --Sheet Image Channel
+local JTC = love.thread.getChannel("JTC") --Job Target Channel
+local RC = love.thread.getChannel("RC") --Results Channel
 
 function love.load(arg)
-  saveDir = love.filesystem.getSaveDirectory().."/"
-  workingDir = love.filesystem.getWorkingDirectory( ).."/"
-  filePath = "Unpack.json"
-  love.graphics.setBackgroundColor(250,250,250)
-  
-  _UseCanvas = love.graphics.isSupported("canvas")
-  _Timer = 0
-  _Wait = 0.50
-  unpacks = {}
-  currentPack = 0
-  
-  fr = {}
-  
-  fr.exit = loveframes.Create("button")
-  fr.exit:SetText("Cancel & Quit"):SetWidth(100):SetPos(5,love.graphics.getHeight()-fr.exit:GetHeight()-5)
-  fr.exit.OnClick = function(object)
-    love.event.quit()
-  end
-  
-  fr.start = loveframes.Create("button")
-  fr.start:SetText("Unpack Files"):SetWidth(100):SetPos(love.graphics.getWidth()-fr.start:GetWidth()-5,love.graphics.getHeight()-fr.start:GetHeight()-5)
-  fr.start.OnClick = function(object)
-    nextPack()
-    object:SetClickable(false)
-    fr.exit:SetText("Stop & Quit")
-  end
-  
-  fr.current = loveframes.Create("progressbar")
-  fr.current:SetWidth(love.graphics.getWidth()-10):SetPos(5,love.graphics.getHeight()-fr.exit:GetHeight()-fr.current:GetHeight()-10)
-  fr.current.OnComplete = function(object)
-    fr.exit:SetText("Quit")
-    doneFrame()
-  end
-  
-  fr.list = loveframes.Create("columnlist")
-  fr.list:SetSize(love.graphics.getWidth()-10,love.graphics.getHeight()-fr.exit:GetHeight()-fr.current:GetHeight()-20)
-  fr.list:SetPos(5,5):SetSelectionEnabled(false):AddColumn("Name"):AddColumn("Position"):AddColumn("Size")
-  
-  fr.author = loveframes.Create("text")
-  fr.author:SetPos(110,love.graphics.getHeight()-fr.exit:GetHeight()):SetText("By: RamiLego4Game, Made For: Concerned Joe.")
-  
-  if not _UseCanvas then
-    fr.wait = loveframes.Create("numberbox")
-    fr.wait:SetSize(100,25):SetPos(590,love.graphics.getHeight()-fr.exit:GetHeight()-5)
-    fr.wait:SetMinMax(0,60):SetValue(0.50):SetIncreaseAmount(1)
-    fr.wait.OnValueChanged = function(object, value)
-      _Wait = value
-    end
-  end
-  
-  loadUnpacks(workingDir..filePath,workingDir)
-  
-  if not _UseCanvas then
-    infoFrame("Graphics Problem","Sorry, But your graphics card does not support canvases, \n      The program will switch to the old slow hook, That \n            may cause some problem while unpacking \n                          images with small width !",true)
-  end
+  love.graphics.setBackgroundColor(255,255,255)
+  _Font[12] = love.graphics.newFont("NotoSans-Regular.ttf",12)
 end
 
 function love.draw()
-  if _Save and not _UseCanvas then
-    love.graphics.setBackgroundColor(0,0,0,0)
-    love.graphics.draw(_Source,_Save.quad,0,0)
-    if _Timer >= _Wait then
-      screenshot = love.graphics.newScreenshot( true )
-      screenshot:encode("/".._Save.filename)
-      
-      save = io.open(saveDir.._Save.filename,"rb")
-      
-      work = io.open(workingDir.."Unpacked/".._Save.filename,"wb")
-      work:write(save:read("*all"))
-      work:flush()
-      work:close()
-      
-      save:close()
-      
-      love.filesystem.remove(_Save.filename)
-      
-      _Save = nil
-    end
+  love.graphics.setFont(_Font[12])
+  
+  love.graphics.setColor(100,100,100,255)
+  love.graphics.printf(_Info.."\n".._Status,_Width/8,_Height/4,(_Width/8)*6,"center")
+  
+  love.graphics.setColor(200,0,0,255)
+  love.graphics.printf(_Errmsg,_Width/8,_Height/2,(_Width/8)*6,"center")
+  
+  love.graphics.setColor(150,150,150,255)
+  love.graphics.printf("Press any key to open the extracted sheets directory",(_Height/16)*0.75,_Height-(_Height/8)*1.35,_Width-(_Height/8),"left")
+  love.graphics.printf("This tool has been made by RamiLego4Game for MoveOrDie",(_Height/16)*0.75,_Height-(_Height/8)*0.75,_Width-(_Height/8),"left")
+end
+
+local function splitFilePath(path)
+  return path:match("(.-)([^\\/]-%.?([^%.\\/]*))$")
+end
+
+local function startJob()
+  tSheet = tArr.meta.image:sub(0,-5)
+  tImage = _Images[tArr.meta.image]
+  _Info = "Target Sheet: "..tSheet
+  local tW, tH = tImage:getDimensions()
+  if tW == tArr.meta.size.w and tH == tArr.meta.size.h then
+    JobStarted = true
+    JobThread = love.thread.newThread("/JobThread.lua")
+    love.filesystem.createDirectory(tSheet)
+    _Status = "Started Extracting Job"
+    JobThread:start()
+    SDC:push("/"..tSheet.."/")
+    SIC:push(tImage)
+    JTC:push(JSON:encode(tArr.frames[JobFrame]))
   else
-    loveframes.draw()
+    _Errmsg = "Error: Sheet image size doesn't match the size specified in the json file !"
+    _Status = "Waiting for Sheet Image: "..tArr.meta.image
+  end
+end
+
+function love.filedropped(file)
+  if JobStarted then return end _Errmsg = ""
+  local filePath, fileName, fileExtension = splitFilePath(file:getFilename())
+  print(fileName.." ("..fileExtension..") has been dropped into the tool.")
+  if fileExtension == "png" or fileExtension == "jpg" then
+    assert(file:open("r")) local fileContent = file:read() file:close()
+    local Filedata, err = love.filesystem.newFileData(fileContent,fileName) if err then error(err) end
+    _Images[fileName] = love.image.newImageData(Filedata)
+    if tArr then
+      if tArr.meta.image == fileName then
+        startJob()
+      else
+        _Status = "Loaded "..fileName..", Waiting for Sheet Image: "..tArr.meta.image
+      end
+    else
+      _Status = "Loaded "..fileName..", Waiting for JSON file..."
+    end
+  elseif fileExtension == "json" then
+    assert(file:open("r")) local jData = file:read() file:close()
+    local jArr = JSON:decode(jData)
+    if _Images[jArr.meta.image] then
+      tArr = jArr
+      startJob()
+    else
+      tSheet = jArr.meta.image:sub(0,-5)
+      _Info = "Target Sheet: "..tSheet
+      _Status = "Waiting for Sheet Image: "..jArr.meta.image
+      tArr = jArr
+    end
   end
 end
 
 function love.update(dt)
-  if not _UseCanvas then _Timer = _Timer + dt end
-  if unpacks[currentPack] ~= nil and _Save == nil then
-    
-    quad = love.graphics.newQuad( unpacks[currentPack].x, unpacks[currentPack].y, unpacks[currentPack].width, unpacks[currentPack].height, _Source:getWidth(), _Source:getHeight() )
-    _Save = { filename=unpacks[currentPack].filename,width=unpacks[currentPack].width,height=unpacks[currentPack].height,quad=quad }
-    if _UseCanvas then
-      _Canvas = love.graphics.newCanvas(_Save.width,_Save.height)
-      love.graphics.setCanvas(_Canvas)
-      _Canvas:clear()
-      love.graphics.setColor(255,255,255,255)
-      love.graphics.draw(_Source,_Save.quad,0,0)
-      love.graphics.setCanvas()
-      imageData = _Canvas:getImageData( )
-      imageData:encode("/".._Save.filename)
-      save = io.open(saveDir.._Save.filename,"rb")
-      
-      work = io.open(workingDir.."Unpacked/".._Save.filename,"wb")
-      work:write(save:read("*all"))
-      work:flush()
-      work:close()
-      
-      save:close()
-      
-      love.filesystem.remove(_Save.filename)
-      _Save = nil
+  local RN = RC:pop()
+  if RN then
+    _Status = "Extracted "..RN
+    JobFrame = JobFrame + 1
+    if tArr.frames[JobFrame] then
+      JTC:push(JSON:encode(tArr.frames[JobFrame]))
     else
-      love.window.setMode(_Save.width, _Save.height, {})
-      love.window.setTitle( _Save.filename )
-      _Wait = fr.wait:GetValue()
-    end
-    nextPack()
-  elseif unpacks[currentPack] == nil and currentPack > 0 then
-    if not _UseCanvas and _Timer > _Wait+1 and _Timer < _Wait+2 then
-      love.graphics.setBackgroundColor(250,250,250,255)
-      love.window.setMode(800, 600, {})
-      love.window.setTitle( "Textures Unpacker" )
-      fr.current:SetValue(currentPack)
-    elseif _UseCanvas then
-      fr.current:SetValue(currentPack)
+      _Info = "The sheet has been extracted successfully, Please drop the next sheet files into this window to extract."
+      _Status = "Waiting for the next sheet files..."
+      JobStarted, JobFrame, tArr, tSheet, tImage, JobThread = false, 1, nil, nil, nil, nil
+      JTC:push(false)
     end
   end
-  loveframes.update(dt)
 end
 
-function love.mousepressed( x, y, button )
-  loveframes.mousepressed(x, y, button)
-end
-
-function love.mousereleased( x, y, button )
-  loveframes.mousereleased(x, y, button)
-end
-
-function love.keypressed(key, unicode)
-  loveframes.keypressed(key, unicode)
-end
- 
 function love.keyreleased(key)
-  loveframes.keyreleased(key)
+  love.system.openURL("file://"..love.filesystem.getSaveDirectory())
 end
 
-function love.textinput(text)
-  loveframes.textinput(text)
-end
-
-function loadUnpacks(loadPath)
-  local jsonfile = io.open(loadPath, "r")
-  if jsonfile == nil then
-    fr.exit:SetText("Quit")
-    fr.start:SetClickable(false)
-    infoFrame("Error","Can find Unpack.json",true)
-    return
-  end
-  local json = jsonfile:read("*all")
-  jsonfile:close()
-  local map = JSON:decode(json)
-  _Source = love.graphics.newImage("/"..map.meta.image)
-  for k,data in ipairs(map.frames) do
-    fr.list:AddRow(data.filename,data.frame.x.."x"..data.frame.y,data.frame.w.."x"..data.frame.h)
-    table.insert(unpacks,#unpacks+1,{ filename=data.filename, x=data.frame.x, y=data.frame.y, width=data.frame.w, height=data.frame.h })
-  end
-  fr.current:SetMax(#unpacks)
-end
-
-function infoFrame(title,desc,closeable)
-  title = title or "Unknown"
-  desc = desc or ""
-  
-  fr.errorFrame = loveframes.Create("frame")
-  fr.errorFrame:SetDraggable(false):SetAlwaysOnTop(true):SetModal(true):SetName(title)
-  if not closeable then fr.errorFrame:ShowCloseButton(false) end
-  fr.errorFrame:SetSize(500,300):SetPos(love.graphics.getWidth()/2,love.graphics.getHeight()/2,true)
-  local text = loveframes.Create("text", fr.errorFrame)
-    text:SetText(desc)
-    text.Update = function(object, dt)
-      object:CenterX()
-      object:SetY(150)
-    end
-end
-
-function doneFrame()
-  fr.doneFrame = loveframes.Create("frame")
-  fr.doneFrame:SetDraggable(false):SetAlwaysOnTop(true):SetModal(true):SetName("Unpacking Done")
-  fr.doneFrame:SetSize(500,300):SetPos(love.graphics.getWidth()/2,love.graphics.getHeight()/2,true)
-  local text = loveframes.Create("text", fr.doneFrame)
-    text:SetText("Unpacking Done.")
-    text.Update = function(object, dt)
-      object:CenterX()
-      object:SetY(150)
-    end
-end
-
-function nextPack()
-  if currentPack > 0 then
-    fr.current:SetValue(currentPack-1)
-    _Timer = 0
-  end
-  currentPack = currentPack + 1
-  if unpacks[currentPack] ~= nil then _Timer = 0 end
+function love.threaderror(thread,errmsg)
+  _Info = "The Job Thread has crashed !"
+  _Status = "Please report this issue in the github repository"
+  _Errmsg = "ThreadError: "..errmsg
 end
