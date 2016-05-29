@@ -4,6 +4,7 @@ io.stdout:setvbuf("no")
 local JSON = require("JSON")
 local _Width, _Height = love.graphics.getDimensions()
 local _Font, _Images, _Info, _Status, _Errmsg = {}, {}, "Please drop the sheet files into this window", "Waiting for sheet files...", ""
+local StartJob, tArr = false, nil
 
 function love.load(arg)
   love.graphics.setBackgroundColor(255,255,255)
@@ -25,7 +26,12 @@ end
 
 local function splitFilePath(path)
   return path:match("(.-)([^\\/]-%.?([^%.\\/]*))$") --("^.+/(.+)$")
-end 
+end
+
+local function startJob()
+  _Info = "Target Sheet: "..tArr.meta.image:sub(0,-5)
+  
+end
 
 function love.filedropped(file)
   local filePath, fileName, fileExtension = splitFilePath(file:getFilename())
@@ -39,10 +45,12 @@ function love.filedropped(file)
     assert(file:open("r")) local jData = file:read() file:close()
     local jArr = JSON:decode(jData)
     if _Images[jArr.meta.image] then
-      _Info = "Target Sheet: "..fileName:sub(0,-6)
+      tArr = jArr
+      startJob()
     else
       _Info = "Loaded Sheet JSON: "..fileName
       _Status = "Waiting for Sheet Image: "..jArr.meta.image
+      tArr = jArr
     end
   end
 end
