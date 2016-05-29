@@ -2,7 +2,7 @@ Texture-Unpacker
 ================
 About:
 ======
-This is a tool that you can use to extract json sheet made using TexturePacker made using LÖVE framework in Lua.
+...This is a tool that you can use to extract json sheet made using TexturePacker made using LÖVE framework in Lua.
 
 Features:
 =========
