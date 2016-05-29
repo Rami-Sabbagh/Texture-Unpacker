@@ -4,7 +4,7 @@ io.stdout:setvbuf("no")
 local JSON = require("JSON")
 local _Width, _Height = love.graphics.getDimensions()
 local _Font, _Images, _Info, _Status, _Errmsg = {}, {}, "Please drop the sheet files into this window", "Waiting for sheet files...", ""
-local StartJob, tArr = false, nil
+local StartJob, tArr, tSheet = false, nil, nil
 
 function love.load(arg)
   love.graphics.setBackgroundColor(255,255,255)
@@ -29,11 +29,14 @@ local function splitFilePath(path)
 end
 
 local function startJob()
-  _Info = "Target Sheet: "..tArr.meta.image:sub(0,-5)
-  
+  tSheet = tArr.meta.image:sub(0,-5)
+  local tImage = _Images[tArr.meta.image]
+  _Info = "Target Sheet: "..tSheet
+  local tW, tH = tImage:getDimensions()
 end
 
 function love.filedropped(file)
+  _Errmsg = ""
   local filePath, fileName, fileExtension = splitFilePath(file:getFilename())
   print(fileName.." ("..fileExtension..") has been dropped into the tool.")
   if fileExtension == "png" or fileExtension == "jpg" then
