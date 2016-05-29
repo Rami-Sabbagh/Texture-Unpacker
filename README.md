@@ -7,6 +7,7 @@ You can download this tool from the repository [releases page][6]
 About:
 ======
  This is a tool that you can use to extract json sheet made using [TexturePacker][3] made using [LÖVE][1] framework in [Lua][2].
+ ![Screenshot while dropping MoveOrDie ui spritesheet into the tool][screenshot]
 
 Features:
 =========
@@ -39,3 +40,4 @@ How to use:
 [4]: http://www.apache.org/licenses/LICENSE-2.0
 [5]: http://www.moveordiegame.com/
 [6]: https://github.com/RamiLego4Game/Texture-Unpacker/releases
+[screenshot]: https://raw.githubusercontent.com/RamiLego4Game/Texture-Unpacker/L%C3%96VE-0.10.0/Screenshot.png
