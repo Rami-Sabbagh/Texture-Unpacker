@@ -19,7 +19,7 @@ TODO:
 - Add rotation support.
 - Add custom error screen.
 - Add Progress bar.
-- ... You can suggest any feature to include.
+- ... You can suggest any other features to be include.
 
 How to use:
 ===========
