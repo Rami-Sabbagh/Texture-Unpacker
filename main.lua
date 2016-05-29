@@ -40,7 +40,15 @@ function love.filedropped(file)
     assert(file:open("r")) local fileContent = file:read() file:close()
     local Filedata, err = love.filesystem.newFileData(fileContent,fileName) if err then error(err) end
     _Images[fileName] = love.graphics.newImage(Filedata)
-    _Status = "Loaded "..fileName..", Waiting for JSON file..."
+    if tArr then
+      if tArr.meta.image == fileName then
+        startJob()
+      else
+        _Status = "Loaded "..fileName..", Waiting for Sheet Image: "..tArr.meta.image
+      end
+    else
+      _Status = "Loaded "..fileName..", Waiting for JSON file..."
+    end
   elseif fileExtension == "json" then
     assert(file:open("r")) local jData = file:read() file:close()
     local jArr = JSON:decode(jData)
