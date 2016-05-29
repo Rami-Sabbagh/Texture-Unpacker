@@ -3,7 +3,7 @@ io.stdout:setvbuf("no")
 
 local JSON = require("JSON")
 local _Width, _Height = love.graphics.getDimensions()
-local _Font, _Images, _Info, _Status = {}, {}, "Please drop the sheet files into this window", "Waiting for sheet files..."
+local _Font, _Images, _Info, _Status, _Errmsg = {}, {}, "Please drop the sheet files into this window", "Waiting for sheet files...", "----"
 
 function love.load(arg)
   love.graphics.setBackgroundColor(255,255,255)
@@ -11,8 +11,10 @@ function love.load(arg)
 end
 
 function love.draw()
-  love.graphics.setColor(100,100,100,255)
   love.graphics.setFont(_Font[12])
+  
+  love.graphics.setColor(100,100,100,255)
+  
   love.graphics.printf(_Info.."\n".._Status,_Width/8,_Height/4,(_Width/8)*6,"center")
   
   love.graphics.setColor(150,150,150,255)
@@ -34,6 +36,12 @@ function love.filedropped(file)
   elseif fileExtension == "json" then
     assert(file:open("r")) local jData = file:read() file:close()
     local jArr = JSON:decode(jData)
+    if _Images[jArr.meta.image] then
+      _Info = "Target Sheet: "..fileName:sub(0,-6)
+    else
+      _Info = "Loaded Sheet JSON: "..fileName
+      _Status = "Waiting for Sheet Image: "..jArr.meta.image
+    end
   end
 end
 
