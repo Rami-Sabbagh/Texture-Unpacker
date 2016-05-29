@@ -4,7 +4,7 @@ io.stdout:setvbuf("no")
 local JSON = require("JSON")
 local _Width, _Height = love.graphics.getDimensions()
 local _Font, _Images, _Info, _Status, _Errmsg = {}, {}, "Please drop the sheet files into this window", "Waiting for sheet files...", ""
-local StartJob, tArr, tSheet = false, nil, nil
+local JobStarted, tArr, tSheet = false, nil, nil
 
 function love.load(arg)
   love.graphics.setBackgroundColor(255,255,255)
@@ -25,7 +25,7 @@ function love.draw()
 end
 
 local function splitFilePath(path)
-  return path:match("(.-)([^\\/]-%.?([^%.\\/]*))$") --("^.+/(.+)$")
+  return path:match("(.-)([^\\/]-%.?([^%.\\/]*))$")
 end
 
 local function startJob()
@@ -33,10 +33,16 @@ local function startJob()
   local tImage = _Images[tArr.meta.image]
   _Info = "Target Sheet: "..tSheet
   local tW, tH = tImage:getDimensions()
+  if tW == tArr.meta.size.w and tH == tArr.meta.size.h then
+    
+  else
+    _Errmsg = "Error: Sheet image size doesn't match the size specified in the json file !"
+    _Status = "Waiting for Sheet Image: "..tArr.meta.image
+  end
 end
 
 function love.filedropped(file)
-  _Errmsg = ""
+  if JobStarted then return end _Errmsg = ""
   local filePath, fileName, fileExtension = splitFilePath(file:getFilename())
   print(fileName.." ("..fileExtension..") has been dropped into the tool.")
   if fileExtension == "png" or fileExtension == "jpg" then
@@ -59,7 +65,8 @@ function love.filedropped(file)
       tArr = jArr
       startJob()
     else
-      _Info = "Loaded Sheet JSON: "..fileName
+      tSheet = jArr.meta.image:sub(0,-5)
+      _Info = "Target Sheet: "..tSheet
       _Status = "Waiting for Sheet Image: "..jArr.meta.image
       tArr = jArr
     end
