@@ -40,4 +40,4 @@ How to use:
 [4]: http://www.apache.org/licenses/LICENSE-2.0
 [5]: http://www.moveordiegame.com/
 [6]: https://github.com/RamiLego4Game/Texture-Unpacker/releases
-[screenshot]: https://raw.githubusercontent.com/RamiLego4Game/Texture-Unpacker/L%C3%96VE-0.10.0/Screenshot.png
+[screenshot]: https://github.com/RamiLego4Game/Texture-Unpacker/raw/master/Screenshot.png
