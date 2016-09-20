@@ -32,6 +32,12 @@ local JobTarget = JTC:demand()
 while JobTarget do
   local Target = JSON:decode(JobTarget)
   --if Target.trimmed then Target.spriteSourceSize.x, Target.spriteSourceSize.y = Target.spriteSourceSize.x-1, Target.spriteSourceSize.y-1 end
+  if Target.rotated then    
+    Target.frame.w,Target.frame.h = Target.frame.h,Target.frame.w  
+    Target.sourceSize.w,Target.sourceSize.h = Target.sourceSize.h,Target.sourceSize.w
+    Target.spriteSourceSize.x,Target.spriteSourceSize.y = Target.spriteSourceSize.y,Target.spriteSourceSize.x
+  end
+  
   local Image = love.image.newImageData(Target.sourceSize.w,Target.sourceSize.h)
   for x = 0,Target.frame.w-1 do
     for y = 0,Target.frame.h-1 do
